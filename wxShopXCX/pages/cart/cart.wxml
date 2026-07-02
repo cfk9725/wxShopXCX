@@ -1,0 +1,53 @@
+<!-- 购物车页 -->
+<view class="page">
+  <!-- 空购物车 -->
+  <view class="empty-cart" wx:if="{{cartList.length === 0}}">
+    <text class="empty-icon">🛒</text>
+    <text class="empty-text">购物车空空如也</text>
+    <navigator url="/pages/index/index" open-type="switchTab" class="go-shopping">去逛逛</navigator>
+  </view>
+
+  <!-- 购物车列表 -->
+  <block wx:if="{{cartList.length > 0}}">
+    <view class="cart-list">
+      <view class="cart-item" wx:for="{{cartList}}" wx:key="id">
+        <!-- 选择框 -->
+        <view class="check-box {{item.checked ? 'checked' : ''}}" bindtap="toggleCheck" data-index="{{index}}">
+          <text wx:if="{{item.checked}}" class="check-icon">✓</text>
+        </view>
+
+        <!-- 商品图片 -->
+        <view class="cart-goods-img">{{item.img}}</view>
+
+        <!-- 商品信息 -->
+        <view class="cart-goods-info">
+          <text class="cart-goods-name">{{item.name}}</text>
+          <view class="cart-goods-bottom">
+            <text class="price">¥{{item.price}}</text>
+            <view class="quantity-control">
+              <view class="qty-btn" catchtap="decreaseQty" data-index="{{index}}">-</view>
+              <text class="qty-num">{{item.quantity}}</text>
+              <view class="qty-btn" catchtap="increaseQty" data-index="{{index}}">+</view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 占位 -->
+    <view style="height: 120rpx;"></view>
+
+    <!-- 底部结算栏 -->
+    <view class="checkout-bar">
+      <view class="check-all-box {{allChecked ? 'checked' : ''}}" bindtap="toggleAll">
+        <text wx:if="{{allChecked}}" class="check-icon">✓</text>
+      </view>
+      <text class="check-all-text">全选</text>
+      <view class="total-section">
+        <text class="total-label">合计：</text>
+        <text class="total-price">¥{{totalPrice}}</text>
+      </view>
+      <view class="checkout-btn" bindtap="onCheckout">结算{{totalCount > 0 ? '(' + totalCount + ')' : ''}}</view>
+    </view>
+  </block>
+</view>

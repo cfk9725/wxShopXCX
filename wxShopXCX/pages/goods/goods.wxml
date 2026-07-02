@@ -1,0 +1,70 @@
+<!-- 商品详情页 -->
+<!-- 加载中 -->
+<view class="loading-wrap" wx:if="{{loading}}">
+  <text class="loading-text">加载中...</text>
+</view>
+
+<view class="page" wx:elif="{{goods}}">
+  <!-- 商品图片区 -->
+  <view class="goods-header">
+    <view class="goods-big-img">{{goods.img}}</view>
+  </view>
+
+  <!-- 价格信息 -->
+  <view class="price-section">
+    <view class="price-row">
+      <text class="current-price">¥{{goods.price}}</text>
+      <text class="origin-price">¥{{goods.oldPrice}}</text>
+      <view class="discount-tag">限时特惠</view>
+    </view>
+    <text class="sales">已售 {{goods.sales || 1000}}+ | 好评率 98%</text>
+  </view>
+
+  <!-- 商品名称 -->
+  <view class="name-section">
+    <text class="goods-title">{{goods.name}}</text>
+    <text class="goods-subtitle">{{goods.desc}}</text>
+  </view>
+
+  <!-- 商品参数 -->
+  <view class="info-section" wx:if="{{goods.params}}">
+    <view class="info-title">商品参数</view>
+    <view class="info-item" wx:for="{{goods.params}}" wx:key="label">
+      <text class="info-label">{{item.label}}</text>
+      <text class="info-value">{{item.value}}</text>
+    </view>
+  </view>
+
+  <!-- 图文详情 -->
+  <view class="detail-section">
+    <view class="info-title">图文详情</view>
+    <view class="detail-content">
+      <view class="detail-block">
+        <text class="detail-text">✅ 精选材质，品质保证</text>
+        <text class="detail-text">✅ 多重检测，安全可靠</text>
+        <text class="detail-text">✅ 7天无理由退换</text>
+        <text class="detail-text">✅ 全国包邮，快速送达</text>
+        <text class="detail-text">✅ 一年免费保修</text>
+      </view>
+      <view class="detail-img">{{goods.img}}</view>
+    </view>
+  </view>
+
+  <!-- 占位，防止被底部栏遮挡 -->
+  <view style="height: 120rpx;"></view>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-bar">
+    <view class="bar-icon" bindtap="goCart">
+      <text class="bar-icon-text">🛒</text>
+      <text class="bar-icon-label">购物车</text>
+    </view>
+    <view class="bar-btn add-cart" bindtap="onAddCart">加入购物车</view>
+    <view class="bar-btn buy-now" bindtap="onBuyNow">立即购买</view>
+  </view>
+</view>
+
+<!-- 商品不存在 -->
+<view class="loading-wrap" wx:else>
+  <text class="loading-text">商品不存在</text>
+</view>
