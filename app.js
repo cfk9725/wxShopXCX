@@ -1,7 +1,10 @@
+const auth = require('./utils/auth.js')
+
 App({
   globalData: {
-    userInfo: null,
-    cart: [],
+    token: '',              // 登录 token
+    userInfo: null,         // 用户信息（头像、昵称等）
+    cart: [],               // 购物车数据
     // API 服务器地址 - 改成你自己的后端地址
     // 本地开发用 mock 服务器：http://localhost:3000
     // 生产环境替换为实际域名（需在微信后台配置 request 合法域名）
@@ -9,11 +12,41 @@ App({
   },
 
   onLaunch() {
-    // 从本地存储恢复购物车
+    // 1. 从本地缓存恢复购物车
     const cart = wx.getStorageSync('cart')
     if (cart) {
       this.globalData.cart = cart
     }
+
+    // 2. 从本地缓存恢复登录态（token + userInfo）
+    auth.restoreAuth()
+
+    // 3. 如果已有 token 则无需重复登录
+    if (auth.isLoggedIn()) {
+      console.log('[App] 已登录，token 有效')
+      return
+    }
+
+    // 4. 无 token：静默执行微信登录，获取 code 换 token
+    console.log('[App] 未登录，执行静默登录...')
+    auth.doLogin()
+      .then(({ token, userInfo }) => {
+        console.log('[App] 静默登录成功，token:', token ? token.substring(0, 20) + '...' : '无')
+        // 如果有缓存的 userInfo（头像/昵称），登录后自动注册
+        const cachedUserInfo = wx.getStorageSync('userInfo')
+        if (cachedUserInfo && cachedUserInfo.nickName) {
+          auth.registerUser(cachedUserInfo)
+            .then(userInfo => {
+              console.log('[App] 自动注册用户信息成功:', userInfo.nickName)
+            })
+            .catch(err => {
+              console.warn('[App] 自动注册用户信息失败:', err)
+            })
+        }
+      })
+      .catch(err => {
+        console.error('[App] 静默登录失败:', err)
+      })
   },
 
   // 添加到购物车

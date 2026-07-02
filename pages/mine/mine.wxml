@@ -2,11 +2,39 @@
 <view class="page">
   <!-- 用户信息区 -->
   <view class="user-header">
-    <view class="avatar">👤</view>
-    <view class="user-info">
-      <text class="username">点击登录</text>
-      <text class="user-tip">登录后享受更多权益</text>
-    </view>
+    <!-- 已登录：显示头像 + 昵称 -->
+    <block wx:if="{{userInfo && isLoggedIn}}">
+      <view class="avatar">
+        <image class="avatar-img" src="{{userInfo.avatarUrl}}" mode="aspectFill"></image>
+      </view>
+      <view class="user-info">
+        <text class="username">{{userInfo.nickName}}</text>
+        <text class="user-tip">已绑定微信账号</text>
+      </view>
+      <view class="logout-btn" bindtap="onLogout">退出</view>
+    </block>
+
+    <!-- 有本地信息但未登录 -->
+    <block wx:elif="{{userInfo}}">
+      <view class="avatar">
+        <image class="avatar-img" src="{{userInfo.avatarUrl}}" mode="aspectFill"></image>
+      </view>
+      <view class="user-info">
+        <text class="username">{{userInfo.nickName}}</text>
+        <text class="user-tip">登录中...</text>
+      </view>
+    </block>
+
+    <!-- 未登录状态 -->
+    <block wx:else>
+      <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+        <view class="avatar avatar-placeholder">👤</view>
+      </button>
+      <view class="user-info">
+        <text class="username" bindtap="onLoginTap">点击登录</text>
+        <text class="user-tip">登录后享受更多权益</text>
+      </view>
+    </block>
   </view>
 
   <!-- 订单状态 -->

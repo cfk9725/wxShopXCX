@@ -6,6 +6,7 @@
 const { get, post } = require('../utils/request.js')
 
 module.exports = {
+  // -- 首页/商品 --
   // 获取首页轮播图
   getBanners: () => get('/api/banners'),
 
@@ -18,9 +19,17 @@ module.exports = {
   // 获取商品详情
   getGoodsDetail: (id) => get('/api/goods/' + id),
 
+  // -- 用户 --
+  // 微信登录（code 换 token + openid）
+  login: (code) => post('/api/user/login', { code }),
+
+  // 注册 / 更新用户信息（头像、昵称）
+  register: (profile) => post('/api/user/register', profile),
+
   // 获取用户信息
   getUserInfo: () => get('/api/user/info'),
 
+  // -- 订单 --
   // 提交订单
   submitOrder: (orderData) => post('/api/order/submit', orderData)
 }

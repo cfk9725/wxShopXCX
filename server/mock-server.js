@@ -1,12 +1,11 @@
 /**
  * Mock API 服务器 - 用于本地开发测试
- * 
+ *
  * 启动方式：
  *   1. 确保已安装 Node.js
  *   2. cd server
- *   3. npm install express cors
- *   4. node mock-server.js
- *   5. 服务器运行在 http://localhost:3000
+ *   3. node mock-server.js
+ *   4. 服务器运行在 http://localhost:3000
  *
  * 微信开发者工具设置：
  *   详情 → 本地设置 → 勾选「不校验合法域名」
@@ -44,7 +43,27 @@ const goodsList = [
   { id: 6, name: '手机支架', price: 25.00, oldPrice: 39.00, img: '📱', desc: '桌面折叠支架，多角度调节', categoryId: 1, stock: 300, sales: 8200, params: [{ label: '材质', value: '铝合金' }, { label: '折叠', value: '支持' }, { label: '调节角度', value: '270度' }] }
 ]
 
-// ===== 路由处理 =====
+// 内存中的用户数据（模拟数据库）
+const userStore = {}
+
+// ===== 工具函数 =====
+
+/**
+ * 读取 POST 请求 body
+ */
+function readBody(req) {
+  return new Promise((resolve) => {
+    let body = ''
+    req.on('data', chunk => { body += chunk })
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(body))
+      } catch (e) {
+        resolve({})
+      }
+    })
+  })
+}
 
 function sendJson(res, data, code = 0) {
   res.writeHead(200, {
@@ -56,7 +75,9 @@ function sendJson(res, data, code = 0) {
   res.end(JSON.stringify({ code: code, data: data, message: 'ok' }))
 }
 
-function handleRequest(req, res) {
+// ===== 路由处理 =====
+
+async function handleRequest(req, res) {
   const url = new URL(req.url, `http://localhost:${PORT}`)
   const path = url.pathname
   const params = url.searchParams
@@ -72,7 +93,8 @@ function handleRequest(req, res) {
     return
   }
 
-  // 路由匹配
+  // -- 商品相关 --
+
   if (path === '/api/banners' && req.method === 'GET') {
     sendJson(res, banners)
     return
@@ -106,14 +128,87 @@ function handleRequest(req, res) {
     return
   }
 
-  if (path === '/api/user/info' && req.method === 'GET') {
+  // -- 用户相关 --
+
+  // 微信登录：code 换 token + 用户信息
+  // POST /api/user/login  { code: "xxx" }
+  if (path === '/api/user/login' && req.method === 'POST') {
+    const body = await readBody(req)
+    const code = body.code || ''
+    console.log('[Mock] 收到登录请求, code:', code ? code.substring(0, 10) + '...' : '空')
+
+    // 生成模拟 token（生产环境由后端调用微信 code2Session 获取 openid 后签发）
+    const token = 'mock_token_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8)
+
+    // 如果该 openid 之前注册过，返回已有用户信息
+    // 这里用 code 前 8 位做简单映射模拟
+    const mockOpenId = 'mock_oid_' + (code.substring(0, 8) || 'unknown')
+    let userInfo = userStore[mockOpenId] || null
+
     sendJson(res, {
+      token: token,
+      userInfo: userInfo,  // 首次登录为 null，注册后返回已存信息
+      openid: mockOpenId   // 仅供 mock 调试，生产环境不要返回给前端
+    })
+    return
+  }
+
+  // 注册 / 更新用户信息
+  // POST /api/user/register  { nickName, avatarUrl }
+  if (path === '/api/user/register' && req.method === 'POST') {
+    const body = await readBody(req)
+    console.log('[Mock] 收到注册请求:', JSON.stringify(body))
+
+    // 从 Authorization header 提取 token（简化处理）
+    const authHeader = req.headers['authorization'] || ''
+    const token = authHeader.replace('Bearer ', '')
+
+    if (!token) {
+      sendJson(res, null, 401)
+      return
+    }
+
+    // 模拟：用 token 后 6 位做 key（生产环境通过 token 查到 openid）
+    const mockOpenId = 'mock_oid_' + (token.slice(-6) || 'fallback')
+
+    const userInfo = {
+      openid: mockOpenId,
+      nickName: body.nickName || '微信用户',
+      avatarUrl: body.avatarUrl || ''
+    }
+
+    // 保存到内存
+    userStore[mockOpenId] = userInfo
+
+    sendJson(res, { userInfo })
+    return
+  }
+
+  // 获取用户信息
+  // GET /api/user/info  需要 Authorization header
+  if (path === '/api/user/info' && req.method === 'GET') {
+    const authHeader = req.headers['authorization'] || ''
+    const token = authHeader.replace('Bearer ', '')
+
+    if (!token) {
+      sendJson(res, null, 401)
+      return
+    }
+
+    const mockOpenId = 'mock_oid_' + (token.slice(-6) || 'fallback')
+    const userInfo = userStore[mockOpenId] || {
       nickName: '微信用户',
-      avatarUrl: 'https://picsum.photos/100/100?random=99',
+      avatarUrl: 'https://picsum.photos/100/100?random=99'
+    }
+
+    sendJson(res, {
+      ...userInfo,
       phone: '138****8888'
     })
     return
   }
+
+  // -- 订单相关 --
 
   // 订单提交
   if (path === '/api/order/submit' && req.method === 'POST') {
@@ -135,12 +230,14 @@ server.listen(PORT, () => {
   console.log('  地址: http://localhost:' + PORT)
   console.log('  ')
   console.log('  可用接口:')
-  console.log('    GET  /api/banners        - 轮播图')
-  console.log('    GET  /api/categories     - 分类列表')
-  console.log('    GET  /api/goods          - 商品列表')
-  console.log('    GET  /api/goods/:id      - 商品详情')
-  console.log('    GET  /api/user/info      - 用户信息')
-  console.log('    POST /api/order/submit   - 提交订单')
+  console.log('    GET  /api/banners          - 轮播图')
+  console.log('    GET  /api/categories       - 分类列表')
+  console.log('    GET  /api/goods            - 商品列表')
+  console.log('    GET  /api/goods/:id        - 商品详情')
+  console.log('    POST /api/user/login       - 微信登录')
+  console.log('    POST /api/user/register    - 注册用户信息')
+  console.log('    GET  /api/user/info        - 获取用户信息')
+  console.log('    POST /api/order/submit     - 提交订单')
   console.log('  ')
   console.log('  按 Ctrl+C 停止')
   console.log('========================================')

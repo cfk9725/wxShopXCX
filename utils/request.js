@@ -1,6 +1,6 @@
 /**
  * 网络请求封装 - Promise 化 wx.request
- * 支持跨域请求，统一错误处理
+ * 支持跨域请求，统一错误处理，自动携带鉴权 token
  */
 
 const app = getApp()
@@ -14,14 +14,20 @@ const app = getApp()
  */
 function request(url, method = 'GET', data = {}) {
   const baseUrl = app.globalData.baseUrl
+  // 自动注入 token
+  const token = app.globalData.token || ''
+  const header = {
+    'content-type': 'application/json'
+  }
+  if (token) {
+    header['Authorization'] = 'Bearer ' + token
+  }
   return new Promise((resolve, reject) => {
     wx.request({
       url: baseUrl + url,
       method: method,
       data: data,
-      header: {
-        'content-type': 'application/json'
-      },
+      header: header,
       success(res) {
         if (res.statusCode === 200 && res.data) {
           // 约定返回格式：{ code: 0, data: ..., message: 'ok' }
