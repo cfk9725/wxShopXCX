@@ -25,16 +25,26 @@ function doLogin() {
           reject(new Error('wx.login 未返回 code'))
           return
         }
-        // 将 code 发给后端，换取 token + 用户信息
-        post('/api/user/login', { code: res.code })
-          .then(data => {
-            const token = data.token
-            const userInfo = data.userInfo || null
-            // 持久化
-            saveAuth(token, userInfo)
-            resolve({ token, userInfo })
-          })
-          .catch(reject)
+        wx.getUserProfile({
+          desc: '用于完善会员资料', // 声明获取用户个人信息后的用途，后续会展示在弹窗中，请谨慎填写
+          success: (res1) => {
+            // 将 code 发给后端，换取 token + 用户信息
+            post('/api/WeChat/RegisterUser', { code: res.code, userInfo: JSON.stringify(res1.userInfo) })
+              .then(data => {
+                const token = data.token
+                const userInfo = data.userInfo || null
+                // 持久化
+                saveAuth(token, userInfo)
+                resolve({ token, userInfo })
+              })
+              .catch(reject)
+            console.log(res);
+            this.setData({
+              userInfo: res.userInfo,
+              hasUserInfo: true
+            })
+          }
+        })
       },
       fail(err) {
         reject(err)

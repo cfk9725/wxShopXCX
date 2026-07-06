@@ -22,6 +22,16 @@ function request(url, method = 'GET', data = {}) {
   if (token) {
     header['Authorization'] = 'Bearer ' + token
   }
+  url = url || "";
+  if (url.indexOf("?") > -1) {
+      url += "&r=" + Math.random();
+  } else {
+      url += "?r=" + Math.random();
+  }
+  if (JSON.stringify(data) != "{}") {
+    var data = btoa(encodeURIComponent(JSON.stringify(options.data)));
+    options.data = { EncryptedData: data };
+  }
   return new Promise((resolve, reject) => {
     wx.request({
       url: baseUrl + url,
@@ -29,17 +39,16 @@ function request(url, method = 'GET', data = {}) {
       data: data,
       header: header,
       success(res) {
-        if (res.statusCode === 200 && res.data) {
-          // 约定返回格式：{ code: 0, data: ..., message: 'ok' }
-          if (res.data.code === 0) {
-            resolve(res.data.data)
-          } else {
-            wx.showToast({
-              title: res.data.message || '请求失败',
-              icon: 'none'
-            })
-            reject(res.data)
-          }
+        if (res.statusCode === 200 && res.data) {          
+          try {
+            var data1 = res.data;
+            if (data1.hasOwnProperty("EncryptedData")) {
+                data1 = decodeURIComponent(atob(data1.EncryptedData)).replaceAll("+", " ");
+                data1 = JSON.parse(data1);
+            }
+            res.data = data1;
+          } catch (e) { };          
+          resolve(res.data);
         } else {
           wx.showToast({
             title: `网络错误(${res.statusCode})`,
@@ -62,6 +71,4 @@ function request(url, method = 'GET', data = {}) {
 module.exports = {
   get: (url, data) => request(url, 'GET', data),
   post: (url, data) => request(url, 'POST', data),
-  put: (url, data) => request(url, 'PUT', data),
-  del: (url, data) => request(url, 'DELETE', data)
 }

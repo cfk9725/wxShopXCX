@@ -24,7 +24,7 @@ module.exports = {
   login: (code) => post('/api/user/login', { code }),
 
   // 注册 / 更新用户信息（头像、昵称）
-  register: (profile) => post('/api/user/register', profile),
+  register: (profile) => post('/WeChat/RegisterUser', profile),
 
   // 获取用户信息
   getUserInfo: () => get('/api/user/info'),

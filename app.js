@@ -8,7 +8,7 @@ App({
     // API 服务器地址 - 改成你自己的后端地址
     // 本地开发用 mock 服务器：http://localhost:3000
     // 生产环境替换为实际域名（需在微信后台配置 request 合法域名）
-    baseUrl: 'http://localhost:3000'
+    baseUrl: 'http://localhost:57656'
   },
 
   onLaunch() {
