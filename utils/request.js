@@ -51,7 +51,8 @@ function request(url, method = 'GET', data = {}) {
                 data1 = JSON.parse(data1);
             }
             res.data = data1;
-          } catch (e) { };          
+          } catch (e) { };     
+          console.log(res.data);     
           resolve(res.data);
         } else {
           wx.showToast({
