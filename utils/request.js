@@ -3,7 +3,7 @@
  * 支持跨域请求，统一错误处理，自动携带鉴权 token
  */
 
-const app = getApp()
+// const app = getApp()
 
 /**
  * 通用请求方法
@@ -13,14 +13,17 @@ const app = getApp()
  * @returns {Promise}
  */
 function request(url, method = 'GET', data = {}) {
-  const baseUrl = app.globalData.baseUrl
+  var Base64 = require('./base64');
+  var app = getApp();
+  console.log(app);
+  var baseUrl = app.globalData.baseUrl
   // 自动注入 token
-  const token = app.globalData.token || ''
-  const header = {
+  var token = app.globalData.token || ''
+  var header = {
     'content-type': 'application/json'
   }
   if (token) {
-    header['Authorization'] = 'Bearer ' + token
+    header['Cookie'] = 'x-custom-token=' + token
   }
   url = url || "";
   if (url.indexOf("?") > -1) {
@@ -29,9 +32,10 @@ function request(url, method = 'GET', data = {}) {
       url += "?r=" + Math.random();
   }
   if (JSON.stringify(data) != "{}") {
-    var data = btoa(encodeURIComponent(JSON.stringify(options.data)));
-    options.data = { EncryptedData: data };
+    data = Base64.encode(encodeURIComponent(JSON.stringify(data)));
+    data = { EncryptedData: data };
   }
+  console.log(baseUrl + url);
   return new Promise((resolve, reject) => {
     wx.request({
       url: baseUrl + url,
@@ -43,7 +47,7 @@ function request(url, method = 'GET', data = {}) {
           try {
             var data1 = res.data;
             if (data1.hasOwnProperty("EncryptedData")) {
-                data1 = decodeURIComponent(atob(data1.EncryptedData)).replaceAll("+", " ");
+                data1 = decodeURIComponent(Base64.decode(data1.EncryptedData)).replaceAll("+", " ");
                 data1 = JSON.parse(data1);
             }
             res.data = data1;

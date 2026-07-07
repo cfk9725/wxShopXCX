@@ -5,10 +5,10 @@
     <!-- 已登录：显示头像 + 昵称 -->
     <block wx:if="{{userInfo && isLoggedIn}}">
       <view class="avatar">
-        <image class="avatar-img" src="{{userInfo.avatarUrl}}" mode="aspectFill"></image>
+        <image class="avatar-img" src="{{userInfo.avatar_url}}" mode="aspectFill"></image>
       </view>
       <view class="user-info">
-        <text class="username">{{userInfo.nickName}}</text>
+        <text class="username">{{userInfo.nick_name}}</text>
         <text class="user-tip">已绑定微信账号</text>
       </view>
       <view class="logout-btn" bindtap="onLogout">退出</view>
@@ -17,10 +17,10 @@
     <!-- 有本地信息但未登录 -->
     <block wx:elif="{{userInfo}}">
       <view class="avatar">
-        <image class="avatar-img" src="{{userInfo.avatarUrl}}" mode="aspectFill"></image>
+        <image class="avatar-img" src="{{userInfo.avatar_url}}" mode="aspectFill"></image>
       </view>
       <view class="user-info">
-        <text class="username">{{userInfo.nickName}}</text>
+        <text class="username">{{userInfo.nick_name}}</text>
         <text class="user-tip">登录中...</text>
       </view>
     </block>

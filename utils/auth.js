@@ -28,21 +28,21 @@ function doLogin() {
         wx.getUserProfile({
           desc: '用于完善会员资料', // 声明获取用户个人信息后的用途，后续会展示在弹窗中，请谨慎填写
           success: (res1) => {
+            console.log(res);
+            console.log(res1);
             // 将 code 发给后端，换取 token + 用户信息
             post('/api/WeChat/RegisterUser', { code: res.code, userInfo: JSON.stringify(res1.userInfo) })
               .then(data => {
-                const token = data.token
-                const userInfo = data.userInfo || null
+                var token = data.token
+                var userInfo = data.userInfo || null
+                if(userInfo) {
+                  userInfo.avatar_url = res1.userInfo.avatarUrl
+                }
                 // 持久化
                 saveAuth(token, userInfo)
                 resolve({ token, userInfo })
               })
               .catch(reject)
-            console.log(res);
-            this.setData({
-              userInfo: res.userInfo,
-              hasUserInfo: true
-            })
           }
         })
       },
@@ -61,14 +61,16 @@ function doLogin() {
 function registerUser(profile) {
   const app = getApp()
   const token = getToken()
-  return post('/api/user/register', {
-    nickName: profile.nickName || '微信用户',
-    avatarUrl: profile.avatarUrl || ''
-  }).then(data => {
-    const userInfo = data.userInfo || data
-    // 合并已有 token 与新用户信息
-    saveAuth(token, userInfo)
-    return userInfo
+  return new Promise((resolve, reject) => {
+    post('/api/WeChat/RegisterUser1', {
+      id: profile.id || 0,
+      nickName: profile.nick_name || '微信用户',
+      avatarUrl: profile.avatar_url || ''
+    }).then(data => {
+      saveAuth(data.token, data.userInfo)
+      resolve(data.userInfo);
+    })
+    .catch(reject)
   })
 }
 

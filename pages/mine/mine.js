@@ -53,23 +53,24 @@ Page({
   },
 
   // -- 选择头像（微信官方 chooseAvatar） --
-  onChooseAvatar(e) {
+  onChooseAvatar(e) {debugger
+    console.log("11111");
     const avatarUrl = e.detail.avatarUrl
     if (!avatarUrl) return
 
     const cached = wx.getStorageSync('userInfo') || {}
     const userInfo = {
-      avatarUrl,
-      nickName: cached.nickName || '微信用户'
+      avatar_url: avatarUrl,
+      nick_name: cached.nickName || '微信用户'
     }
-    // 先存本地
-    this._saveLocal(userInfo)
     // 如果已登录，同步到后端
-    this._registerToServer(userInfo)
+    this._registerToServer(userInfo, function() {
+      this._saveLocal(userInfo)
+    })
   },
 
   // -- 点击"点击登录"文字区域：输入昵称 --
-  onLoginTap() {
+  onLoginTap() { debugger
     const that = this
     wx.showModal({
       title: '设置昵称',
@@ -77,14 +78,15 @@ Page({
       placeholderText: '请输入昵称',
       success(res) {
         if (res.confirm && res.content) {
-          const cached = wx.getStorageSync('userInfo') || {}
-          const userInfo = {
-            avatarUrl: cached.avatarUrl || '',
+          var cached = wx.getStorageSync('userInfo') || {}
+          var userInfo = {
+            avatarUrl: cached.avatar_url || '',
             nickName: res.content
           }
-          that._saveLocal(userInfo)
           // 如果已登录，同步到后端
-          that._registerToServer(userInfo)
+          that._registerToServer(userInfo, function() {
+            that._saveLocal(userInfo)
+          })
         }
       }
     })
@@ -98,26 +100,21 @@ Page({
   },
 
   // -- 发请求到后端注册/更新用户信息 --
-  _registerToServer(userInfo) {
+  _registerToServer(userInfo, callback) {
     if (!auth.isLoggedIn()) {
       // 还没拿到 token，先尝试登录再注册
       wx.showLoading({ title: '登录中...' })
       auth.doLogin()
-        .then(() => {
-          wx.showLoading({ title: '注册中...' })
-          return auth.registerUser(userInfo)
-        })
         .then(serverUserInfo => {
           wx.hideLoading()
           this._syncUserInfo()
           wx.showToast({ title: '登录成功', icon: 'success' })
+          callback && callback();
         })
         .catch(err => {
           wx.hideLoading()
           console.error('[Mine] 注册失败:', err)
-          // 即使后端注册失败，本地信息也已保存
-          this._syncUserInfo()
-          wx.showToast({ title: '已保存（离线模式）', icon: 'none' })
+          wx.showToast({ title: '登录失败', icon: 'none' })
         })
       return
     }
@@ -129,12 +126,12 @@ Page({
         wx.hideLoading()
         this._syncUserInfo()
         wx.showToast({ title: '保存成功', icon: 'success' })
+        callback && callback();
       })
       .catch(err => {
         wx.hideLoading()
         console.error('[Mine] 注册失败:', err)
-        this._syncUserInfo()
-        wx.showToast({ title: '网络异常，已本地保存', icon: 'none' })
+        wx.showToast({ title: '登录失败', icon: 'none' })
       })
   },
 

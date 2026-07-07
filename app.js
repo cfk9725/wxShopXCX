@@ -12,6 +12,8 @@ App({
   },
 
   onLaunch() {
+    auth = require('./utils/auth.js')
+    
     // 1. 从本地缓存恢复购物车
     const cart = wx.getStorageSync('cart')
     if (cart) {
