@@ -5,7 +5,7 @@
     <!-- 已登录：显示头像 + 昵称 -->
     <block wx:if="{{userInfo && isLoggedIn}}">
       <view class="avatar">
-        <image class="avatar-img" src="{{userInfo.avatar_url}}" mode="aspectFill"></image>
+        <image class="avatar-img" src="{{userImg}}" mode="aspectFill"></image>
       </view>
       <view class="user-info">
         <text class="username">{{userInfo.nick_name}}</text>
@@ -14,21 +14,10 @@
       <view class="logout-btn" bindtap="onLogout">退出</view>
     </block>
 
-    <!-- 有本地信息但未登录 -->
-    <block wx:elif="{{userInfo}}">
-      <view class="avatar">
-        <image class="avatar-img" src="{{userInfo.avatar_url}}" mode="aspectFill"></image>
-      </view>
-      <view class="user-info">
-        <text class="username">{{userInfo.nick_name}}</text>
-        <text class="user-tip">登录中...</text>
-      </view>
-    </block>
-
     <!-- 未登录状态 -->
     <block wx:else>
-      <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
-        <view class="avatar avatar-placeholder">👤</view>
+      <button class="avatar-btn">
+        <image class="avatar avatar-placeholder" src="{{userImg}}"></image>
       </button>
       <view class="user-info">
         <text class="username" bindtap="onLoginTap">点击登录</text>
@@ -62,3 +51,36 @@
     </view>
   </view>
 </view>
+
+<!-- 弹出层注册 start -->
+<view 
+  class="popup-mask {{showPopup ? 'show' : ''}}" 
+  bindtap="hideInputPopup"
+></view>
+
+<view class="popup-panel {{showPopup ? 'show' : ''}}">
+  <view class="popup-header">
+    <text>注册</text>
+    <text class="close" bindtap="hideInputPopup">✕</text>
+  </view>
+
+  <view class="popup-body">
+      <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+        <image class="avatar avatar-placeholder" src="{{userImg}}"></image>
+      </button>
+    <!-- 微信昵称输入框 -->
+    <input
+      class="nickname-input"
+      type="nickname"
+      placeholder="请输入昵称"
+      value="{{nickName}}"
+      bindinput="onNicknameInput"
+    />
+  </view>
+
+  <view class="popup-footer">
+    <button type="primary" bindtap="onConfirm">确定</button>
+  </view>
+</view>
+<!-- 弹出层注册 end -->
+

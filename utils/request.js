@@ -3,8 +3,6 @@
  * 支持跨域请求，统一错误处理，自动携带鉴权 token
  */
 
-// const app = getApp()
-
 /**
  * 通用请求方法
  * @param {string} url    接口路径（不含 baseUrl）
@@ -12,7 +10,7 @@
  * @param {object} data   请求数据
  * @returns {Promise}
  */
-function request(url, method = 'GET', data = {}) {
+function request(url, method = 'GET', options = {}) {
   var Base64 = require('./base64');
   var app = getApp();
   console.log(app);
@@ -31,49 +29,50 @@ function request(url, method = 'GET', data = {}) {
   } else {
       url += "?r=" + Math.random();
   }
-  if (JSON.stringify(data) != "{}") {
-    data = Base64.encode(encodeURIComponent(JSON.stringify(data)));
-    data = { EncryptedData: data };
+  if (JSON.stringify(options.data) != "{}") {
+    options.data = Base64.encode(encodeURIComponent(JSON.stringify(options.data)));
+    options.data = { EncryptedData: options.data };
   }
   console.log(baseUrl + url);
-  return new Promise((resolve, reject) => {
-    wx.request({
-      url: baseUrl + url,
-      method: method,
-      data: data,
-      header: header,
-      success(res) {
-        if (res.statusCode === 200 && res.data) {          
-          try {
-            var data1 = res.data;
-            if (data1.hasOwnProperty("EncryptedData")) {
-                data1 = decodeURIComponent(Base64.decode(data1.EncryptedData)).replaceAll("+", " ");
-                data1 = JSON.parse(data1);
-            }
-            res.data = data1;
-          } catch (e) { };     
-          console.log(res.data);     
-          resolve(res.data);
-        } else {
-          wx.showToast({
-            title: `网络错误(${res.statusCode})`,
-            icon: 'none'
-          })
-          reject(res)
-        }
-      },
-      fail(err) {
+  
+  wx.request({
+    url: baseUrl + url,
+    method: method,
+    data: options.data,
+    header: header,
+    success(res) {
+      if (res.statusCode != 200) {
         wx.showToast({
-          title: '网络连接失败',
+          title: `网络错误(${res.statusCode})`,
           icon: 'none'
-        })
-        reject(err)
+        });
+        return;
+      }              
+      try {
+        var data1 = res.data;
+        if (data1.hasOwnProperty("EncryptedData")) {
+            data1 = decodeURIComponent(Base64.decode(data1.EncryptedData)).replaceAll("+", " ");
+            data1 = JSON.parse(data1);
+        }
+        res.data = data1;
+      } catch (e) { };     
+      console.log(res.data);
+      options.success(res.data);
+    },
+    fail(err) {
+      if(options.error) {
+        options.error(err.errMsg);
+        return;
       }
-    })
+      wx.showToast({
+        title: '网络连接失败',
+        icon: 'none'
+      })
+    }
   })
 }
 
 module.exports = {
-  get: (url, data) => request(url, 'GET', data),
-  post: (url, data) => request(url, 'POST', data),
+  get: (url, options) => request(url, 'GET', options),
+  post: (url, options) => request(url, 'POST', options),
 }

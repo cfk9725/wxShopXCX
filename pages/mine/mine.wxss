@@ -156,3 +156,76 @@
   border-radius: 30rpx;
   flex-shrink: 0;
 }
+
+/* 蒙层 */
+.popup-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 999;
+}
+
+.popup-mask.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 底部面板 */
+.popup-panel {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.popup-panel.show {
+  transform: translateY(0);
+}
+
+/* 内部样式 */
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+  border-bottom: 1rpx solid #eee;
+}
+
+.close {
+  color: #999;
+}
+
+.popup-body {
+  padding: 32rpx;
+}
+
+.nickname-input {
+  height: 80rpx;
+  border: 1rpx solid #ddd;
+  border-radius: 8rpx;
+  padding: 0 20rpx;
+}
+
+.popup-footer {
+  padding: 32rpx;
+}
+
+.popup-body .avatar-btn {
+  width: 62px;
+  margin-bottom: 15px;
+}
+
