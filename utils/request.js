@@ -11,7 +11,7 @@
  * @returns {Promise}
  */
 function request(url, method = 'GET', options = {}) {
-  var Base64 = require('./base64');
+  var util = require('./util.js');
   var app = getApp();
   console.log(app);
   var baseUrl = app.globalData.baseUrl
@@ -30,7 +30,7 @@ function request(url, method = 'GET', options = {}) {
       url += "?r=" + Math.random();
   }
   if (JSON.stringify(options.data) != "{}") {
-    options.data = Base64.encode(encodeURIComponent(JSON.stringify(options.data)));
+    options.data = util.encode(options.data);
     options.data = { EncryptedData: options.data };
   }
   console.log(baseUrl + url);
@@ -51,7 +51,7 @@ function request(url, method = 'GET', options = {}) {
       try {
         var data1 = res.data;
         if (data1.hasOwnProperty("EncryptedData")) {
-            data1 = decodeURIComponent(Base64.decode(data1.EncryptedData)).replaceAll("+", " ");
+            data1 = util.decode(data1.EncryptedData);
             data1 = JSON.parse(data1);
         }
         res.data = data1;

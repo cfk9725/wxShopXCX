@@ -1,5 +1,6 @@
 var app = getApp()
-var { post } = require('../../utils/request.js')
+var { post } = require('../../utils/request.js');
+var util = require('../../utils/util.js');
 
 Page({
   data: {
@@ -7,8 +8,13 @@ Page({
     USER_KEY: 'userInfo',
 
     showPopup: false,
-    userImg: app.globalData.baseUrl + "/img/defaultUserImg.png",    
+    defaultImg: app.globalData.baseUrl + "/img/defaultUserImg.png",
+    userImg: app.globalData.baseUrl + "/img/defaultUserImg.png",  
     nickName: '',
+    phoneNumber: '',
+
+    showLoginPopup: false,
+    username: '',
 
     userInfo: null,
     isLoggedIn: false,      // 是否已完成 token 登录
@@ -30,13 +36,25 @@ Page({
   },
 
   onShow() {
-    this.showInputPopup();
-    this._syncUserInfo()
     // 如果未登录，自动触发登录
-    if (!auth.isLoggedIn() && !this.data.loginLoading) {
-      this._autoLogin()
+    if (!this.isLoggedIn()) {
+      this.login(1);
+    } else {
+      this._syncUserInfo();
     }
   }, 
+
+  isLoggedIn() {
+    var token = app.globalData.token || wx.getStorageSync(this.data.TOKEN_KEY) || '';
+    return !!token;
+  },
+  
+  _syncUserInfo() {
+    var cached = wx.getStorageSync(this.data.USER_KEY);
+    var userInfo = app.globalData.userInfo || cached || null;
+    var isLoggedIn = this.isLoggedIn()
+    this.setData({ userImg: userInfo.AvatarUrl, userInfo, isLoggedIn })
+  },
 
   saveAuth(token, userInfo) {
     var app = getApp()
@@ -47,13 +65,24 @@ Page({
       wx.setStorageSync(this.data.USER_KEY, userInfo)
     }
   },
+  clearAuth() {
+    var app = getApp()
+    app.globalData.token = null;
+    app.globalData.userInfo = null;
+    wx.removeStorageSync(this.data.TOKEN_KEY);
+    wx.removeStorageSync(this.data.USER_KEY);
+    this.setData({ userImg: this.data.defaultImg, userInfo: null, isLoggedIn: false });
+  },
   // -- 点击"点击登录"文字区域：获取图片昵称，修改昵称 --
-  onLoginTap() { debugger
+  onLoginTap() {
+    this.showLoginPopup();
+  },
+  login(isNotTs) {
     var that = this
-    wx.showLoading({ title: '登录中...' });
+    if(!isNotTs) wx.showLoading({ title: '登录中...' });
     wx.login({
       fail(err) {
-        wx.hideLoading();
+        if(!isNotTs) wx.hideLoading();
         wx.showToast({
           title: err.errMsg,
           icon: 'none'
@@ -61,7 +90,7 @@ Page({
       },
       success(res) {
         if (!res.code) {
-          wx.hideLoading();
+          if(!isNotTs) wx.hideLoading();
           wx.showToast({
             title: 'wx.login 未返回 code',
             icon: 'none',
@@ -73,7 +102,7 @@ Page({
             code: res.code
           },
           success: function (result) {
-            wx.hideLoading();
+            if(!isNotTs) wx.hideLoading();
             if(result.StatusCode == 0) { //报错
               wx.showToast({
                 title: result.Message,
@@ -91,113 +120,176 @@ Page({
               });
               return;
             }
+            that.clearAuth();
+            if(isNotTs) return;
             wx.showToast({
               title: "还未注册，请先注册",
               icon: 'none',
             })
-            that.showInputPopup();
+            that.showRegisterPopup();
           },
         })
       },
     });
   },
 
-  // -- 同步用户信息到页面 --
-  _syncUserInfo() {
-    const cached = wx.getStorageSync('userInfo')
-    const userInfo = app.globalData.userInfo || cached || null
-    const isLoggedIn = auth.isLoggedIn()
-    this.setData({ userInfo, isLoggedIn })
-  },
-
-  // -- 静默登录：wx.login → code 换 token --
-  _autoLogin() {
-    this.setData({ loginLoading: true })
-    auth.doLogin()
-      .then(({ token, userInfo }) => {
-        console.log('[Mine] 静默登录成功')
-        this._syncUserInfo()
-        this.setData({ loginLoading: false })
-      })
-      .catch(err => {
-        console.error('[Mine] 静默登录失败:', err)
-        this.setData({ loginLoading: false })
-      })
-  },
-
   // -- 选择头像（微信官方 chooseAvatar） --
-  onChooseAvatar(e) {debugger
-    console.log("11111");
+  onChooseAvatar(e) {
     const avatarUrl = e.detail.avatarUrl
-    if (!avatarUrl) return
+    if (!avatarUrl) return;
+    this.uploadAvatar(avatarUrl);
+  },  
 
-    const cached = wx.getStorageSync('userInfo') || {}
-    const userInfo = {
-      avatar_url: avatarUrl,
-      nick_name: cached.nickName || '微信用户'
-    }
-    // 如果已登录，同步到后端
-    this._registerToServer(userInfo, function() {
-      this._saveLocal(userInfo)
-    })
+  // 2. 封装上传逻辑
+  uploadAvatar(tempFilePath) {
+    var that = this;
+    var guidCode = util.guid();
+    wx.uploadFile({
+      // 替换为你自己的后端接口地址
+      url: app.globalData.baseUrl + '/api/WeChat/uploadFjs?r=' + Math.random(), 
+      header: {
+        'Cookie': 'x-custom-token=' + app.globalData.token
+      },
+      filePath: tempFilePath, // 临时文件路径
+      name: 'file',         // 后端通过该字段名获取文件
+      // 可携带 userId、token 等业务参数
+      formData: { guidCode: guidCode }, 
+      fail: (err) => {
+        wx.showToast({
+          title: err.errMsg,
+          icon: 'none',
+        })
+      },
+      success: (res) => {
+        // 注意：res.data 默认是字符串，需要手动解析
+        var result = JSON.parse(res.data);
+        if (result.code == 1) {
+          wx.showToast({
+            title: result.Message,
+            icon: 'none',
+          })
+          return;
+        } 
+        var userImg = app.globalData.baseUrl + '/api/WeChat/FjPreview?EncryptedData=' + util.encode({ 
+          guidCode: guidCode 
+        });
+        if(this.data.userInfo) this.data.userInfo.AvatarUrl = userImg;   
+        that.setData({ 
+          userImg: userImg,
+        });
+      },
+    });
   },
 
-  // -- 存本地（globalData + storage） --
-  _saveLocal(userInfo) {
-    app.globalData.userInfo = userInfo
-    wx.setStorageSync('userInfo', userInfo)
-    this.setData({ userInfo })
+  // 显示弹窗
+  showRegisterPopup() {
+    this.setData({ showPopup: true });
   },
 
-  // -- 发请求到后端注册/更新用户信息 --
-  _registerToServer(userInfo, callback) {
-    if (!auth.isLoggedIn()) {
-      // 还没拿到 token，先尝试登录再注册
-      wx.showLoading({ title: '登录中...' })
-      auth.doLogin()
-        .then(serverUserInfo => {
-          wx.hideLoading()
-          this._syncUserInfo()
-          wx.showToast({ title: '登录成功', icon: 'success' })
-          callback && callback();
-        })
-        .catch(err => {
-          wx.hideLoading()
-          console.error('[Mine] 注册失败:', err)
-          wx.showToast({ title: '登录失败', icon: 'none' })
-        })
-      return
-    }
+  // 隐藏弹窗
+  hideRegisterPopup() {
+    this.setData({ showPopup: false });
+  },
 
-    // 已有 token，直接注册
-    wx.showLoading({ title: '保存中...' })
-    auth.registerUser(userInfo)
-      .then(serverUserInfo => {
-        wx.hideLoading()
-        this._syncUserInfo()
-        wx.showToast({ title: '保存成功', icon: 'success' })
-        callback && callback();
-      })
-      .catch(err => {
-        wx.hideLoading()
-        console.error('[Mine] 注册失败:', err)
-        wx.showToast({ title: '登录失败', icon: 'none' })
-      })
+  // 监听输入
+  onNickNameInput(e) {
+    this.setData({ nickName: e.detail.value });
+  },
+
+  // 监听输入
+  onPhoneNumberInput(e) {
+    this.setData({ phoneNumber: e.detail.value });
+  },
+
+  // 确认提交
+  onRegisterConfirm() {
+    var that = this;
+    if (!that.data.nickName.trim()) {
+      wx.showToast({ title: '请输入昵称', icon: 'none' });
+      return;
+    }
+    var phoneNumber = that.data.phoneNumber || '';
+    if (phoneNumber.length > 0 && phoneNumber.length != 11) {
+      wx.showToast({ title: '手机号只能是11位', icon: 'none' });
+      return;
+    }
+    if(!(/^1[3-9]\d{9}$/.test(phoneNumber))) {      
+      wx.showToast({ title: '请输入正确的手机号', icon: 'none' });
+      return;
+    }
+    wx.showLoading({ title: '注册中...' });    
+    wx.login({
+      fail(err) {
+        wx.hideLoading();
+        wx.showToast({
+          title: err.errMsg,
+          icon: 'none'
+        })
+      },
+      success(res) {
+        if (!res.code) {
+          wx.hideLoading();
+          wx.showToast({
+            title: 'wx.login 未返回 code',
+            icon: 'none',
+          })
+          return
+        }
+        post('/api/WeChat/RegisterUser', {
+          data: {
+            code: res.code, 
+            userInfo: JSON.stringify({
+              nickName: that.data.nickName,
+              avatarUrl: that.data.userImg,
+              phoneNumber: that.data.phoneNumber,
+            })
+          },
+          success: function (result) {
+            wx.hideLoading();
+            if(result.StatusCode == 0) { //报错
+              wx.showToast({
+                title: result.Message,
+                icon: 'none',
+              })
+              return
+            }
+            if(!result.Data.userInfo.AvatarUrl) result.Data.userInfo.AvatarUrl = that.data.defaultImg;         
+            that.saveAuth(result.Data.token, result.Data.userInfo);
+            that.setData({ 
+              userInfo: result.Data.userInfo, 
+              userImg: result.Data.userInfo.AvatarUrl,
+              isLoggedIn: true,
+            });            
+
+            // TODO：这里可以把昵称传给服务器
+            that.hideRegisterPopup();
+          }
+        })
+      }
+    });
   },
 
   // -- 退出登录 --
   onLogout() {
+    var that = this;
     wx.showModal({
       title: '提示',
       content: '确定要退出登录吗？',
       success: (res) => {
         if (res.confirm) {
-          auth.logout()
-          this.setData({ userInfo: null, isLoggedIn: false })
-          wx.showToast({ title: '已退出', icon: 'none' })
+          that.clearAuth();
+          wx.showToast({ title: '已退出', icon: 'none' });
         }
       }
     })
+  },  
+
+  showLoginPopup() {
+    this.setData({ showLoginPopup: true });
+  },
+
+  hideLoginPopup() {
+    this.setData({ showLoginPopup: false });
   },
 
   onOrderTap() {
@@ -207,32 +299,4 @@ Page({
   onFuncTap(e) {
     wx.showToast({ title: '功能开发中', icon: 'none' })
   },  
-
-  // 显示弹窗
-  showInputPopup() {
-    this.setData({ showPopup: true });
-  },
-
-  // 隐藏弹窗
-  hideInputPopup() {
-    this.setData({ showPopup: false });
-  },
-
-  // 监听输入
-  onNicknameInput(e) {
-    this.setData({ nickName: e.detail.value });
-  },
-
-  // 确认提交
-  onConfirm() {
-    if (!this.data.nickName.trim()) {
-      wx.showToast({ title: '请输入昵称', icon: 'none' });
-      return;
-    }
-
-    console.log('用户输入的昵称：', this.data.nickName);
-
-    // TODO：这里可以把昵称传给服务器
-    this.hideInputPopup();
-  },
 })

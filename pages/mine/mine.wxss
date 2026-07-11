@@ -211,13 +211,18 @@
 
 .popup-body {
   padding: 32rpx;
+  padding-bottom: 0;
 }
 
-.nickname-input {
+.zcInputCtl {
   height: 80rpx;
   border: 1rpx solid #ddd;
   border-radius: 8rpx;
   padding: 0 20rpx;
+}
+
+.zcInputCtl + .zcInputCtl {
+  margin-top: 20rpx;
 }
 
 .popup-footer {
@@ -225,7 +230,7 @@
 }
 
 .popup-body .avatar-btn {
-  width: 62px;
-  margin-bottom: 15px;
+  width: 120rpx;
+  margin-bottom: 20rpx;
 }
 

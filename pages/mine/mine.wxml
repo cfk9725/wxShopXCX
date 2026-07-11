@@ -54,33 +54,75 @@
 
 <!-- 弹出层注册 start -->
 <view 
-  class="popup-mask {{showPopup ? 'show' : ''}}" 
-  bindtap="hideInputPopup"
+  class="popup-mask register-popup {{showPopup ? 'show' : ''}}" 
+  bindtap="hideRegisterPopup"
 ></view>
 
 <view class="popup-panel {{showPopup ? 'show' : ''}}">
   <view class="popup-header">
     <text>注册</text>
-    <text class="close" bindtap="hideInputPopup">✕</text>
+    <text class="close" bindtap="hideRegisterPopup">✕</text>
   </view>
 
   <view class="popup-body">
-      <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
-        <image class="avatar avatar-placeholder" src="{{userImg}}"></image>
-      </button>
+    <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+      <image class="avatar avatar-placeholder" src="{{userImg}}"></image>
+    </button>
     <!-- 微信昵称输入框 -->
     <input
-      class="nickname-input"
+      class="zcInputCtl nickname-input"
       type="nickname"
-      placeholder="请输入昵称"
+      placeholder="请输入昵称*"
       value="{{nickName}}"
-      bindinput="onNicknameInput"
+      bindinput="onNickNameInput"
+    />
+    <input
+      class="zcInputCtl phonenumber-input"
+      placeholder="请输入手机号"
+      value="{{phoneNumber}}"
+      bindinput="onPhoneNumberInput"
     />
   </view>
 
   <view class="popup-footer">
-    <button type="primary" bindtap="onConfirm">确定</button>
+    <button type="primary" bindtap="onRegisterConfirm">确定</button>
   </view>
 </view>
 <!-- 弹出层注册 end -->
+
+<!-- 弹出层登录 start -->
+<view 
+  class="popup-mask register-popup {{showLoginPopup ? 'show' : ''}}" 
+  bindtap="hideLoginPopup"
+></view>
+
+<view class="popup-panel {{showLoginPopup ? 'show' : ''}}">
+  <view class="popup-header">
+    <text>登录</text>
+    <text class="close" bindtap="hideLoginPopup">✕</text>
+  </view>
+
+  <view class="popup-body">
+    <input
+      class="zcInputCtl username-input"
+      placeholder="请输入账户*"
+      value="{{username}}"
+      bindinput="onNickNameInput"
+    />
+    <input
+      class="zcInputCtl username-input"
+      placeholder="请输入密码*"
+      value="{{phoneNumber}}"
+      bindinput="onPhoneNumberInput"
+    />
+    <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+      <image class="avatar avatar-placeholder" src="{{userImg}}"></image>
+    </button>
+  </view>
+
+  <view class="popup-footer">
+    <button type="primary" bindtap="onRegisterConfirm">确定</button>
+  </view>
+</view>
+<!-- 弹出层登录 end -->
 
