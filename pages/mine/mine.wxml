@@ -9,7 +9,12 @@
       </view>
       <view class="user-info">
         <text class="username">{{userInfo.nick_name}}</text>
-        <text class="user-tip">已绑定微信账号</text>
+        <block wx:if="{{!userInfo.OpenId}}">
+          <text class="user-tip" bindtap="onBindingWx">点击绑定微信账号</text>
+        </block>
+        <block wx:else>
+          <text class="user-tip">已绑定微信账号</text>
+        </block>
       </view>
       <view class="logout-btn" bindtap="onLogout">退出</view>
     </block>
@@ -92,7 +97,7 @@
 
 <!-- 弹出层登录 start -->
 <view 
-  class="popup-mask register-popup {{showLoginPopup ? 'show' : ''}}" 
+  class="popup-mask login-popup {{showLoginPopup ? 'show' : ''}}" 
   bindtap="hideLoginPopup"
 ></view>
 
@@ -107,21 +112,22 @@
       class="zcInputCtl username-input"
       placeholder="请输入账户*"
       value="{{username}}"
-      bindinput="onNickNameInput"
+      bindinput="onUserNameInput"
     />
     <input
-      class="zcInputCtl username-input"
+      class="zcInputCtl userpwd-input"
+      password
       placeholder="请输入密码*"
       value="{{phoneNumber}}"
-      bindinput="onPhoneNumberInput"
+      bindinput="onUserPwdInput"
     />
-    <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
-      <image class="avatar avatar-placeholder" src="{{userImg}}"></image>
-    </button>
+    <button type="primary" class="loginConfirm" bindtap="onLoginConfirm">确定</button>
   </view>
 
   <view class="popup-footer">
-    <button type="primary" bindtap="onRegisterConfirm">确定</button>
+    <button open-type="primary" class="avatar-btn" bindtap="onWxLoginConfirm">
+      <image class="avatar avatar-placeholder" src="{{wxImg}}"></image>
+    </button>
   </view>
 </view>
 <!-- 弹出层登录 end -->

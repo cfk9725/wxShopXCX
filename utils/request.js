@@ -47,14 +47,26 @@ function request(url, method = 'GET', options = {}) {
           icon: 'none'
         });
         return;
-      }              
+      }
       try {
         var data1 = res.data;
         if (data1.hasOwnProperty("EncryptedData")) {
             data1 = util.decode(data1.EncryptedData);
             data1 = JSON.parse(data1);
         }
-        res.data = data1;
+        res.data = data1;        
+        if(res.cookies && res.cookies.length > 0) {
+          var tokens = res.cookies.filter(item => item.startsWith('x-custom-token') && item.length > "x-custom-token=".length);
+          if(tokens.length > 0) {
+            var token = tokens[0].substr("x-custom-token=".length);
+            token = token.substring(0, token.lastIndexOf(";"));
+            app.globalData.token = token;
+            wx.setStorageSync(app.globalData.TOKEN_KEY, token);
+            if(res.data.hasOwnProperty("Data") && res.data.Data.hasOwnProperty("token")) {
+              res.data.Data.token = token;
+            }
+          }
+        }
       } catch (e) { };     
       console.log(res.data);
       options.success(res.data);

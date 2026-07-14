@@ -4,8 +4,10 @@ var util = require('../../utils/util.js');
 
 Page({
   data: {
-    TOKEN_KEY: 'auth_token',
-    USER_KEY: 'userInfo',
+    TOKEN_KEY: app.globalData.TOKEN_KEY,
+    USER_KEY: app.globalData.USER_KEY,
+    
+    wxImg: app.globalData.baseUrl + "/img/wx.png",  
 
     showPopup: false,
     defaultImg: app.globalData.baseUrl + "/img/defaultUserImg.png",
@@ -15,6 +17,7 @@ Page({
 
     showLoginPopup: false,
     username: '',
+    userpwd: '',
 
     userInfo: null,
     isLoggedIn: false,      // 是否已完成 token 登录
@@ -37,9 +40,9 @@ Page({
 
   onShow() {
     // 如果未登录，自动触发登录
-    if (!this.isLoggedIn()) {
+    if (!this.isLoggedIn() && app.globalData.isAutoLogin) {
       this.login(1);
-    } else {
+    } else if (this.isLoggedIn()) {
       this._syncUserInfo();
     }
   }, 
@@ -50,16 +53,20 @@ Page({
   },
   
   _syncUserInfo() {
+    var cachedToken = wx.getStorageSync(this.data.TOKEN_KEY);
+    var token = app.globalData.token || cachedToken || "";
     var cached = wx.getStorageSync(this.data.USER_KEY);
     var userInfo = app.globalData.userInfo || cached || null;
-    var isLoggedIn = this.isLoggedIn()
-    this.setData({ userImg: userInfo.AvatarUrl, userInfo, isLoggedIn })
+    var isLoggedIn = this.isLoggedIn();
+    this.saveAuth(token, userInfo);
+    this.setData({ userImg: userInfo.AvatarUrl, userInfo, isLoggedIn });
   },
 
   saveAuth(token, userInfo) {
     var app = getApp()
     app.globalData.token = token;
     app.globalData.userInfo = userInfo;
+    app.globalData.isAutoLogin = true;
     wx.setStorageSync(this.data.TOKEN_KEY, token)
     if (userInfo) {
       wx.setStorageSync(this.data.USER_KEY, userInfo)
@@ -69,6 +76,7 @@ Page({
     var app = getApp()
     app.globalData.token = null;
     app.globalData.userInfo = null;
+    app.globalData.isAutoLogin = false;
     wx.removeStorageSync(this.data.TOKEN_KEY);
     wx.removeStorageSync(this.data.USER_KEY);
     this.setData({ userImg: this.data.defaultImg, userInfo: null, isLoggedIn: false });
@@ -77,7 +85,7 @@ Page({
   onLoginTap() {
     this.showLoginPopup();
   },
-  login(isNotTs) {
+  login(isNotTs, callback) {
     var that = this
     if(!isNotTs) wx.showLoading({ title: '登录中...' });
     wx.login({
@@ -87,6 +95,7 @@ Page({
           title: err.errMsg,
           icon: 'none'
         })
+        callback && callback(0);
       },
       success(res) {
         if (!res.code) {
@@ -95,6 +104,7 @@ Page({
             title: 'wx.login 未返回 code',
             icon: 'none',
           })
+          callback && callback(0);
           return
         }
         post('/api/WeChat/Login', {          
@@ -108,6 +118,7 @@ Page({
                 title: result.Message,
                 icon: 'none',
               })
+              callback && callback(0);
               return
             }
             if(result.StatusCode == 1) { //登陆成功
@@ -118,15 +129,20 @@ Page({
                 userImg: result.Data.userInfo.AvatarUrl,
                 isLoggedIn: true,
               });
+              callback && callback(1);
               return;
             }
             that.clearAuth();
-            if(isNotTs) return;
+            if(isNotTs) {
+              callback && callback(0);
+              return;
+            }
             wx.showToast({
               title: "还未注册，请先注册",
               icon: 'none',
             })
             that.showRegisterPopup();
+            callback && callback(0);
           },
         })
       },
@@ -290,6 +306,121 @@ Page({
 
   hideLoginPopup() {
     this.setData({ showLoginPopup: false });
+  },
+
+  onUserNameInput(e) {
+    this.setData({ username: e.detail.value });
+  },
+
+  onUserPwdInput(e) {
+    this.setData({ userpwd: e.detail.value });
+  },
+
+  onLoginConfirm () {
+    var that = this;
+    if (!that.data.username.trim()) {
+      wx.showToast({ title: '请输入账户', icon: 'none' });
+      return;
+    }
+    if (!that.data.userpwd.trim()) {
+      wx.showToast({ title: '请输入密码', icon: 'none' });
+      return;
+    }
+    
+    wx.showLoading({ title: '登录中...' });
+    post('/api/WeChat/Login1', {          
+      data: {
+        username: that.data.username,
+        userpwd: that.data.userpwd
+      },
+      success: function (result) {
+        wx.hideLoading();
+        if(result.StatusCode == 0) { //报错
+          wx.showToast({
+            title: result.Message,
+            icon: 'none',
+          })
+          return
+        }
+        if(result.StatusCode == 1) { //登陆成功
+          if(!result.Data.userInfo.AvatarUrl) result.Data.userInfo.AvatarUrl = that.data.userImg;              
+          that.saveAuth(result.Data.token, result.Data.userInfo);
+          that.setData({ 
+            userInfo: result.Data.userInfo, 
+            userImg: result.Data.userInfo.AvatarUrl,
+            isLoggedIn: true,
+          });
+          that.hideLoginPopup();
+          return;
+        }
+        that.clearAuth();
+        if(isNotTs) return;
+        wx.showToast({
+          title: "还未注册，请先注册",
+          icon: 'none',
+        })
+        that.hideLoginPopup();
+        that.showRegisterPopup();
+      },
+    })
+  },
+
+  onWxLoginConfirm () {
+    var that = this;
+    that.login(null, function(isSuccess) {
+      if(isSuccess == 1) {
+        that.hideLoginPopup();
+      }
+      else if(that.data.showPopup) {
+        that.hideLoginPopup();
+      }
+    });
+  },
+
+  onBindingWx() {
+    var that = this;
+    wx.showLoading({ title: '绑定中...' });
+    wx.login({
+      fail(err) {
+        wx.hideLoading();
+        wx.showToast({
+          title: err.errMsg,
+          icon: 'none'
+        })
+      },
+      success(res) {
+        if (!res.code) {
+          wx.hideLoading();
+          wx.showToast({
+            title: 'wx.login 未返回 code',
+            icon: 'none',
+          })
+          return
+        }
+        post('/api/WeChat/BindingWx', {          
+          data: {
+            code: res.code,
+            id: that.data.userInfo.Id
+          },
+          success: function (result) {
+            wx.hideLoading();
+            if(result.StatusCode == 0) { //报错
+              wx.showToast({
+                title: result.Message,
+                icon: 'none',
+              })
+              return
+            }            
+            if(!result.Data.userInfo.AvatarUrl) result.Data.userInfo.AvatarUrl = that.data.userImg;              
+            that.saveAuth(result.Data.token, result.Data.userInfo);
+            that.setData({ 
+              userInfo: result.Data.userInfo, 
+              userImg: result.Data.userInfo.AvatarUrl,
+            });
+          },
+        })
+      },
+    });
   },
 
   onOrderTap() {
