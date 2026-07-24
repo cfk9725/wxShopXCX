@@ -1,6 +1,8 @@
 var app = getApp()
 var { post } = require('../../utils/request.js');
 var util = require('../../utils/util.js');
+var QQMapWX = require('../../utils/qqmap-wx-jssdk.min');
+var qqmapsdk = new QQMapWX({ key: 'UPTBZ-VR3OG-U5WQJ-QNIS6-5RKR5-5DBP4' });
 
 Page({
   data: {
@@ -31,11 +33,36 @@ Page({
     ],
     funcList: [
       { key: 'address', icon: '📍', text: '收货地址' },
-      { key: 'coupon', icon: '🎟️', text: '优惠券' },
+      // { key: 'coupon', icon: '🎟️', text: '优惠券' },
       { key: 'favorite', icon: '⭐', text: '我的收藏' },
       { key: 'service', icon: '🎧', text: '联系客服' },
       { key: 'about', icon: 'ℹ️', text: '关于我们' },
-    ]
+    ],    
+
+    showShDzPopup: false,
+
+    showShDzSzPopup: false,
+    
+    //腾讯地图相关
+    keyword: '',
+    latitude: 39.9042,
+    longitude: 116.4074,
+    markers: [],
+    maplist: [],    
+    //腾讯地图相关
+
+    shDzlist: [],
+
+    //收件人信息
+    sjrId: 0,             //收件人id
+    sjrRecipientName: "", //收件人姓名
+    sjrMobile: "",        //收件人手机号
+    sjrStreet: "",        //详细街道地址
+    sjrPostalCode: "",    //邮政编码
+    sjrIsDefault: 0,      //是否默认地址
+    sjrLongitude: 0,      //经度
+    sjrLatitude: 0,       //纬度
+    //收件人信息
   },
 
   onShow() {
@@ -428,6 +455,210 @@ Page({
   },
 
   onFuncTap(e) {
-    wx.showToast({ title: '功能开发中', icon: 'none' })
+    var that = this;
+    if(!that.data.userInfo) {      
+      wx.showToast({
+        title: "请先登录",
+        icon: 'none',
+      })
+      return;
+    }
+    var key = e.currentTarget.dataset.key;
+    switch(key)
+    {
+      case "address":
+        that.showShDzPopup();
+        that.GetShDzs();
+        break;
+      default:
+        wx.showToast({ title: '功能开发中', icon: 'none' })
+        break;
+    }
+  },   
+
+  showShDzPopup() {
+    this.setData({ showShDzPopup: true });
+  },
+
+  hideShDzPopup() {
+    this.setData({ showShDzPopup: false });
   },  
+
+  showShDzSzPopup() {
+    this.setData({ showShDzSzPopup: true });
+  },
+
+  hideShDzSzPopup() {
+    this.setData({ showShDzSzPopup: false });
+  },
+
+  onBtnAddShDz() {
+    var that = this;
+    that.setData({
+      sjrRecipientName: that.data.userInfo.RealName || that.data.userInfo.NickName,
+      sjrMobile: that.data.userInfo.Mobile || "",
+      sjrStreet: "",
+      sjrPostalCode: "",
+      sjrIsDefault: 0,
+    });
+    this.showShDzSzPopup();
+    this.getMyLocation();
+  },
+
+  //腾讯地图相关
+  // 1. 获取当前位置
+  getMyLocation() {
+    var that = this;
+    wx.getLocation({
+      type: 'gcj02', // 腾讯/微信地图都用 gcj02
+      success: (res) => {
+        that.setData({
+          latitude: res.latitude,
+          longitude: res.longitude,
+          markers: [{
+            id: 0,
+            latitude: res.latitude,
+            longitude: res.longitude,
+            title: '我的位置',
+            width: 32, height: 32,
+          }]
+        })
+      },
+      fail: function(err) { 
+        console.log(err.errMsg);
+        wx.showToast({ title: err.errMsg, icon: 'none' });
+      }
+    })
+  },
+
+  onMapInput(e) { 
+    this.setData({ keyword: e.detail.value }) 
+  },
+
+  // 2. 关键词搜索 POI
+  onMapSearch() { 
+    var that = this;
+    var kw = that.data.keyword.trim();
+    if (!kw) return
+    qqmapsdk.search({
+      keyword: kw,
+      // location: `${that.data.latitude},${that.data.longitude}`,
+      page_size: 20,
+      success: (res) => {
+        var list = res.data.map(p => ({
+          id: p.id,
+          title: p.title,
+          address: p.address,
+          latitude: p.location.lat,
+          longitude: p.location.lng,
+        }))
+        that.setData({ maplist: list })
+      },
+      fail: (err) => console.error(err)
+    })
+  },
+
+  // 3. 选中某个搜索结果 → 地图中心移动
+  onMapSelect(e) {
+    var that = this;
+    var item = e.currentTarget.dataset.item
+    that.setData({
+      latitude: item.latitude,
+      longitude: item.longitude,
+      markers: [{
+        id: item.id,
+        latitude: item.latitude,
+        longitude: item.longitude,
+        title: item.title,
+        width: 32, height: 32,
+      }],
+      sjrLatitude: item.latitude,
+      sjrLongitude: item.longitude,
+      sjrStreet: item.address,
+    })
+    // 这里就已经“获取位置”了
+    // wx.showToast({ title: `已选：${item.title}`, icon: 'none' })
+    console.log('选中位置:', item)
+  },
+
+  onMapTap() {},
+  
+  //腾讯地图相关
+
+  onIsDefaultChange(e) {
+    this.setData({
+      sjrIsDefault: e.detail.value.length > 0 ? 1 : 0
+    });
+  },
+
+  GetShDzs() {
+    var that = this;
+    post('/api/WeChat/GetShDzs', {
+      data: {
+        userID: that.data.userInfo.Id,
+      },
+      success: function (result) {
+        if(result.StatusCode == 0) { //报错
+          wx.showToast({
+            title: result.Message,
+            icon: 'none',
+          })
+          return
+        }
+        that.setData({ shDzlist: result.Data })
+      }
+    })
+  },
+
+  onBtnSaveShDzSz() {    
+    var that = this;
+    wx.showLoading({ title: '设置中...' });
+    post('/api/WeChat/AddShDz', {
+      data: {
+        id: that.data.sjrId, 
+        userID: that.data.userInfo.Id,
+        sjrRecipientName: that.data.sjrRecipientName,
+        sjrMobile: that.data.sjrMobile,
+        sjrStreet: that.data.sjrStreet,
+        sjrPostalCode: that.data.sjrPostalCode,
+        sjrIsDefault: that.data.sjrIsDefault,
+        sjrLongitude: that.data.sjrLongitude,
+        sjrLatitude: that.data.sjrLatitude,
+      },
+      success: function (result) {
+        wx.hideLoading();
+        if(result.StatusCode == 0) { //报错
+          wx.showToast({
+            title: result.Message,
+            icon: 'none',
+          })
+          return
+        }
+        that.GetShDzs();
+        that.hideShDzSzPopup();
+      }
+    })
+  },
+  
+  onMapSelect(e) {
+    var that = this;
+    var item = e.currentTarget.dataset.item
+    that.setData({
+      latitude: item.latitude,
+      longitude: item.longitude,
+      markers: [{
+        id: item.id,
+        latitude: item.latitude,
+        longitude: item.longitude,
+        title: item.title,
+        width: 32, height: 32,
+      }],
+      sjrLatitude: item.latitude,
+      sjrLongitude: item.longitude,
+      sjrStreet: item.address,
+    })
+    // 这里就已经“获取位置”了
+    // wx.showToast({ title: `已选：${item.title}`, icon: 'none' })
+    console.log('选中位置:', item)
+  },
 })

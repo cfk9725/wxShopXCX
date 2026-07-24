@@ -47,7 +47,7 @@
 
   <!-- 功能列表 -->
   <view class="func-section">
-    <view class="func-item" wx:for="{{funcList}}" wx:key="key" bindtap="onFuncTap" data-key="{{item.key}}">
+    <view class="func-item" wx:for="{{funcList}}" bindtap="onFuncTap" data-key="{{item.key}}">
       <view class="func-left">
         <text class="func-icon">{{item.icon}}</text>
         <text class="func-text">{{item.text}}</text>
@@ -132,3 +132,80 @@
 </view>
 <!-- 弹出层登录 end -->
 
+<!-- 弹出层收货地址 start -->
+<view 
+  class="popup-mask shDz-popup {{showShDzPopup ? 'show' : ''}}" 
+  bindtap="hideShDzPopup"
+></view>
+
+<view class="popup-panel shDz-panel {{showShDzPopup ? 'show' : ''}}">
+  <view class="popup-header">
+    <text>收货地址管理</text>
+    <text class="close" bindtap="hideShDzPopup">✕</text>
+  </view>
+
+  <view class="popup-tools">
+    <button type="primary" bindtap="onBtnAddShDz">新增</button>
+  </view>
+
+  <view class="popup-body">
+    <scroll-view scroll-y class="shDzScroll">
+      <view wx:for="{{shDzlist}}" wx:key="id" bindtap="onMapSelect" data-item="{{item}}">
+        <view class="mapItem">
+          <view class="mapItemTitle">{{item.is_default == 1 ? "默认 - " : ""}}{{item.recipient_name}} - {{item.mobile}}</view>
+          <view class="mapItemAddress">{{item.street}}</view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+</view>
+<!-- 弹出层收货地址 end -->
+
+<!-- 弹出层收货地址设置 start -->
+<view 
+  class="popup-mask shDzSz-popup {{showShDzSzPopup ? 'show' : ''}}" 
+  bindtap="hideShDzSzPopup"
+></view>
+
+<view class="popup-panel shDzSz-panel {{showShDzSzPopup ? 'show' : ''}}">
+  <view class="popup-header">
+    <text>收货地址设置</text>
+    <text class="close" bindtap="hideShDzSzPopup">✕</text>
+  </view>
+
+  <view class="popup-body">
+    <scroll-view scroll-y>
+      <view class="search-bar">
+        <input class="zcInputCtl mapInput" placeholder="搜索地点，如：咖啡店" value="{{keyword}}" bindinput="onMapInput" bindconfirm="onMapSearch" />
+      </view>
+
+      <map
+        id="myMap"
+        longitude="{{longitude}}"
+        latitude="{{latitude}}"
+        scale="16"
+        markers="{{markers}}"
+        style="width:100%;height:30vh;"
+        bindtap="onMapTap"
+      ></map>
+
+      <scroll-view scroll-y class="mapResult">
+        <view wx:for="{{maplist}}" wx:key="id" bindtap="onMapSelect" data-item="{{item}}">
+          <view class="mapItem">
+            <view class="mapItemTitle">{{item.title}}</view>
+            <view class="mapItemAddress">{{item.address}}</view>
+          </view>
+        </view>
+      </scroll-view>      
+      <input class="zcInputCtl mapInputCtl" placeholder="收件人姓名" value="{{sjrRecipientName}}" />   
+      <input class="zcInputCtl mapInputCtl" placeholder="收件人手机号" value="{{sjrMobile}}" />   
+      <input class="zcInputCtl mapInputCtl" placeholder="详细地址" value="{{sjrStreet}}" />   
+      <input class="zcInputCtl mapInputCtl" placeholder="邮政编码" value="{{sjrPostalCode}}" />
+      <checkbox-group class="mapInputCtl" bindchange="onIsDefaultChange">        
+        是否默认地址：<checkbox value="1" checked="{{sjrIsDefault}}"/>
+      </checkbox-group>    
+      <button type="primary" class="mapInputCtl" bindtap="onBtnSaveShDzSz">保存</button>
+    </scroll-view>
+  </view>
+</view>
+<!-- 弹出层收货地址设置 end -->

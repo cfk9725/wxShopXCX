@@ -5,6 +5,16 @@
     "pages/cart/cart",
     "pages/mine/mine"
   ],
+  
+  "permission": {
+    "scope.userLocation": {
+      "desc": "需要获取你的位置用于地图展示与选点"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getLocation",
+    "chooseLocation"
+  ],
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#1e90ff",
